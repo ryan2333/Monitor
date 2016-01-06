@@ -48,6 +48,15 @@ templates = {
 for k,v in templates.items():
     redisSrv.set(k, json.dumps(v))
 
+hosts = {
+    'linux2333':'template1',
+    'linux3333':'template2',
+    'linux4333':'template1',
+}
+for k,v in hosts.items():
+    redisSrv.set(k, v)
+
+
 while True:
     data = result.parse_response()
     print data[2]

@@ -9,7 +9,8 @@ from plugins import plugin_api
 channel = 'FM90.0'
 redis_cli = RedisHelper()
 hostname='linux2333'
-config = json.loads(redis_cli.get('template1'))
+tempName = redis_cli.get(hostname)
+config = json.loads(redis_cli.get(tempName))
 
 while True:
     for k,v in config.items():

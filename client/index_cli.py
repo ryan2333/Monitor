@@ -23,7 +23,6 @@ while True:
             func = getattr(plugin_api, pluginName)   #反射参数一为模块，参数二为方法
             data = func()
             if k == 'load':
-                
                 getData = data['load5']
                 warm, error = v['load5']
                 getData = float(getData)
@@ -35,5 +34,5 @@ while True:
                     data['level'] = 1
             else:
                 data['level'] = 1
-            redis_cli.fabu(json.dumps(data)
+            redis_cli.fabu(json.dumps(data))
             config[k]['lasttime'] = currenttime

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #_*_ coding:utf-8 _*_
-import sys
+
 import time
 import json
 from backend.redisHelper import RedisHelper

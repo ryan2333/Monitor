@@ -22,7 +22,8 @@ templates = {
         'load':{
             'interval':10,
             'pluginName':'getLoadInfo',
-            'lastTime':0    
+            'lastTime':0,
+            'load':[0.02,0.1]   
             }   
               
         },
@@ -60,3 +61,11 @@ for k,v in hosts.items():
 while True:
     data = result.parse_response()
     print data[2]
+    getInfo = json.loads(json.dumps(data[2]))
+    if getInfo['level'] == 3:
+        print '\033[31m%s\033[0m'%getInfo
+    if getInfo['level'] == 2:
+        print '\033[33m%s\033[0m'%getInfo
+    if getInfo['level'] == 1:
+        print '\033[32m %s \033[0m'%getInfo
+    print '================================================='

@@ -1,4 +1,5 @@
 eclipse.preferences.version=1
+encoding//client/backend/redisHelper.py=utf-8
 encoding//client/index_cli.py=utf-8
 encoding//client/plugins/cpuInfo.py=utf-8
 encoding//client/plugins/loadInfo.py=utf-8

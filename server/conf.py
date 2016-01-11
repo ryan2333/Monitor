@@ -2,7 +2,9 @@
 #_*_coding:utf-8_*_
 from backend.redisHelper import *
 import json
+from ecdsa.ecdsa import __main__
 
+redisSrv = RedisHelper()
 class BaseMonitor:
     def __init__(self, name, interval, pluginName, threshold):
         self.name = name
@@ -56,17 +58,54 @@ class BaseTemplate:
             'load': load,
             'mem': mem
             }
+    
+    @property
+    def service(self):
+        return self.__services
+    
     @property
     def editCpu(self):
-        return self.Items
+        return self.__services['cpu'] 
     
 def init_template():
     t1 = BaseTemplate(cpu=DefaultCpuMonitor(), mem=DefaultMemMonitor(),load=DefaultLoadMonitor())
+    t1.editCpu().interval = 10
     return {'template1': t1}   
 
-    
-cpu = BaseMonitor('cpu', 10, 'getCpuInfo', 0, {'idle':75})
-mem = BaseMonitor('mem', 10, 'getMemInfo', 0, {'MemAvailable':1500000})
-load = BaseMonitor('load', 10, 'getLoadInfo', 0, {'load5':[0.02, 0.1]})
+def push_config_to_redis(redisSrv, templates):
+    for key, template in templates.items():
+        config = {}
+        for k, v in template.service.items():
+            config[k] = {'interval': v.interval, 'pluginName': v.pluginName, 'lasttime': 0}
+            for tk, tval in v.threshold.items():
+                config[k][tk] = tval
+            redisSrv.set(key, json.dumps(config))
 
-template1 = BaseTemplate(cpu, mem, load)
+def init_hostname_certname():
+    hosts = {
+        'linux2333.puppet.com': 'template1',
+        'windows2333.puppet.com': 'template1',
+             
+        }
+    #主机名对应的模板添加到redis
+    for k,v in hosts.items():
+        redisSrv.set(k, v)
+def run(result):
+    while True:
+        data = result.parse_response()
+        getInfo = json.loads(data[2])
+        if getInfo['level'] == 3:
+            print '\033[31m%s\033[0m'%getInfo
+        if getInfo['level'] == 2:
+            print '\033[33m%s\033[0m'%getInfo
+        if getInfo['level'] == 1:
+            print '\033[32m %s \033[0m'%getInfo
+        print '================================================='
+        
+if __name__ == '__main__':
+    redisSrv = RedisHelper()
+    result = redisSrv.subscribe('FM90.0')
+    templates = init_template()
+    init_hostname_certname()
+    push_config_to_redis(redisSrv, templates)
+    run(result)

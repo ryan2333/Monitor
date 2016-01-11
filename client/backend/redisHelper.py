@@ -1,19 +1,25 @@
 #!/usr/bin/env python
-#_*_ coding:utf-8 _*_
+#coding:utf-8
 
 import redis
-from time import sleep
+
 class RedisHelper:
+    
     def __init__(self):
-        self.__conn = redis.Redis(host='127.0.0.1', port=6379)
+        self.__conn = redis.Redis(host='127.0.0.1')
+        
     
     def get(self,key):
         return self.__conn.get(key)
     
-    def set(self, key, value):
+    def set(self,key,value):
         self.__conn.set(key, value)
-    
-    def fabu(self, msg):
+    '''  
+    def set_ex(self,key,value,ex):
+        self.__conn.set(key,value,ex)
+    '''
+        
+    def public(self,msg):
         self.__conn.publish('FM90.0', msg) 
         
     def subscribe(self):
@@ -21,6 +27,4 @@ class RedisHelper:
         pub.subscribe('FM90.0')
         pub.parse_response()
         return pub
-      
-
-
+    

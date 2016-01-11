@@ -1,180 +1,139 @@
-
 #!/usr/bin/env python
-#_*_ coding:utf-8 _*_
+#coding:utf-8
 
-#!/usr/bin/env python
-#_*_coding:utf-8_*_
-from backend.redisHelper import *
-import json
-import time
 
-redisSrv = RedisHelper()
-class BaseMonitor:
-    def __init__(self, name, interval, pluginName, triggers):
+from backend.redisHelper import RedisHelper
+import  json
+
+class BaseService:  
+    def __init__(self,name,interval,pluginname,triggers):
         self.name = name
         self.interval = interval
-        self.pluginName = pluginName
+        self.last_time = 0
+        self.plugin_name = pluginname
         self.triggers = triggers
-
-class DefaultCpuMonitor(BaseMonitor):
+    
+class DefaultCpuService(BaseService):
     def __init__(self):
         name = 'cpu'
-        interval = 7
-        pluginName = 'getCpuInfo'
+        interval = 5
+        plugin_name = 'getCpuInfo'
         triggers = {}
-        BaseMonitor.__init__(self, name, interval, pluginName, triggers)
-        
-class DefaultMemMonitor(BaseMonitor):
-    def __init__(self):
-        name = 'load'
-        interval = 7
-        pluginName = 'getMemInfo'
-        triggers = {}
-        BaseMonitor.__init__(self, name, interval, pluginName, triggers)
+        BaseService.__init__(self, name, interval, plugin_name, triggers)
 
-class DefaultLoadMonitor(BaseMonitor):
+class DefaultMemoryService(BaseService):
+    def __init__(self):
+        name = 'memory'
+        interval = 3
+        plugin_name = 'getMemInfo'
+        triggers = {}
+        BaseService.__init__(self, name, interval, plugin_name, triggers)
+
+class DefaultLoadService(BaseService):
     def __init__(self):
         name = 'load'
-        interval = 7
-        pluginName = 'getLoadInfo'
-        lasttime = 0
+        interval = 6
+        plugin_name = 'getLoadInfo'
         triggers = {
-            'load1': [0.01, 0.02],
-            'load5': [0.02, 0.05],
-            'load15': [0.05,0.1]
-            }
-        BaseMonitor.__init__(self, name, interval, pluginName, lasttime, triggers)
-
-
+                'load1': [0.01,0.02],
+                'load5': [0.02,0.05],
+                'load15': [0.05,0.1],
+        }
+        BaseService.__init__(self, name, interval, plugin_name, triggers)
+        
 class BaseTemplate:
-    def __init__(self, cpu, mem, load):
-        self.__services = {
-            'cpu': cpu,
-            'mem': mem,
-            'load': load,           
-            }
     
+    def __init__(self,cpu,memory,load):
+        self.__services = {
+                'cpu': cpu,
+                'memory': memory,
+                'load':  load,
+            }
     @property
     def service(self):
         return self.__services
-    
+
     @property
-    def editCpu(self):
-        return self.__services['cpu'] 
+    def editcpu(self):
+        return self.__services['cpu']
 
-#将所有模板添加到redis    
+
+'''
+templates = {
+    'template_1':{
+        'cpu':{'interval':7,
+                'plugin_name':'get_cpu_info',
+                'last_time':0
+            },
+        'load':{'interval':5,
+                'plugin_name':'get_load_info',
+                'last_time':0,
+                'load5':[0.02,0.1],
+            },
+        'memory':{'interval':2,
+                'plugin_name':'get_memory_info',
+                'last_time':0
+            }
+    },
+    'template_2':{
+        'cpu':{'interval':4,
+                'plugin_name':'get_cpu_info',
+                'last_time':0
+            },
+        'load':{'interval':6,
+                'plugin_name':'get_load_info',
+                'last_time':0
+            },
+        'memory':{'interval':20,
+                'plugin_name':'get_memory_info',
+                'last_time':0
+            }
+    }
+ }
+ '''
+   
+#所有的模板添加到redis
 def init_template():
-    t1 = BaseTemplate(cpu=DefaultCpuMonitor(), mem=DefaultMemMonitor(),load=DefaultLoadMonitor())
-    t1.editCpu().interval = 10
-    return {'template1': t1}   
+    t1 = BaseTemplate(cpu=DefaultCpuService(),memory=DefaultMemoryService(),load=DefaultLoadService())
+    t1.editcpu.interval = 3
+    return {'template_1':t1}
 
-def push_config_to_redis(redisSrv, templates):
-    for key, template in templates.items():
+def push_config_to_redis(rediscli,templates):
+    for key,template in templates.items():
         config = {}
-        for k, v in template.service.items():
-            config[k] = {'interval': v.interval, 'pluginName': v.pluginName, 'lasttime': 0}
-            for tk, tval in v.threshold.items():
+        for k,v in template.service.items():
+            config[k] = {'interval':v.interval,'plugin_name':v.plugin_name,'last_time':0} 
+            for tk,tval in v.triggers.items():
                 config[k][tk] = tval
-            redisSrv.set(key, json.dumps(config))
+        rediscli.set(key,json.dumps(config))
 
-def init_hostname_certname():
+def init_hostname_certname(): 
     hosts = {
-        'linux2333.puppet.com': 'template1',
-        'windows2333.puppet.com': 'template1',
-             
-        }
+        'linux2233.puppet.com':'template_1',
+        'windows2233.puppet.com':'template_1',
+        'linux22101.zjz.com':'template_1',
+    }
     #主机名对应的模板添加到redis
-    for k,v in hosts.items():
-        redisSrv.set(k, v)
-        
-def run(result):
+    for key,value in hosts.items():
+        rediscli.set(key, value)
+
+def run(result):    
+    
     while True:
         data = result.parse_response()
-        getInfo = json.loads(data[2])
-        if getInfo['level'] == 3:
-            print '\033[31m%s\033[0m'%getInfo
-        if getInfo['level'] == 2:
-            print '\033[33m%s\033[0m'%getInfo
-        if getInfo['level'] == 1:
-            print '\033[32m %s \033[0m'%getInfo
-        print '================================================='
+        get_info = json.loads(data[2])
+        if get_info['level'] == 3:
+            print '\033[31m %s \033[0m' %(get_info,)
+        elif get_info['level'] == 2:
+            print '\033[33m %s \033[0m' %(get_info,)
+        elif get_info['level'] == 1:
+            print '\033[32m %s \033[0m' %(get_info,)
+        print '============================'
         
 if __name__ == '__main__':
-    redisSrv = RedisHelper()
-    result = redisSrv.subscribe('FM90.0')
+    rediscli = RedisHelper()
+    result = rediscli.subscribe()
     templates = init_template()
     init_hostname_certname()
-    push_config_to_redis(redisSrv, templates)
+    push_config_to_redis(rediscli,templates)
     run(result)
-
-
-
-'''
-import time
-import json
-from backend.redisHelper import RedisHelper
-channel = 'FM90.0'
-redisSrv = RedisHelper()
-result = redisSrv.subscribe(channel)
-templates = {
-    'template1': {
-        'cpu':{
-            'interval':10,
-            'pluginName':'getCpuInfo',
-            'lastTime':0
-            },
-        'mem':{
-            'interval':10,
-            'pluginName':'getMemInfo',
-            'lastTime':0
-            },
-        'load':{
-            'interval':10,
-            'pluginName':'getLoadInfo',
-            'lastTime':0,
-            'load5':[0.02,0.1]   
-            }   
-              
-        },
-    'template2': {
-        'cpu':{
-            'interval':15,
-            'pluginName':'getCpuInfo',
-            'lastTime':0
-            },
-        'mem':{
-            'interval':10,
-            'pluginName':'getMemInfo',
-            'lastTime':0
-            },
-        'load':{
-            'interval':20,
-            'pluginName':'getLoadInfo',
-            'lastTime':0    
-            }   
-              
-        },
-}
-for k,v in templates.items():
-    redisSrv.set(k, json.dumps(v))
-
-hosts = {
-    'linux2333':'template1',
-    'linux3333':'template2',
-    'linux4333':'template1',
-}
-for k,v in hosts.items():
-    redisSrv.set(k, v)
-
-
-while True:
-    data = result.parse_response()
-    getInfo = json.loads(data[2])
-    if getInfo['level'] == 3:
-        print '\033[31m%s\033[0m'%getInfo
-    if getInfo['level'] == 2:
-        print '\033[33m%s\033[0m'%getInfo
-    if getInfo['level'] == 1:
-        print '\033[32m %s \033[0m'%getInfo
-    print '================================================='
-'''

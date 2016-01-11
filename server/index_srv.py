@@ -10,11 +10,27 @@ import time
 
 redisSrv = RedisHelper()
 class BaseMonitor:
-    def __init__(self, name, interval, pluginName, threshold):
+    def __init__(self, name, interval, pluginName, triggers):
         self.name = name
         self.interval = interval
         self.pluginName = pluginName
-        self.threshold = threshold
+        self.triggers = triggers
+
+class DefaultCpuMonitor(BaseMonitor):
+    def __init__(self):
+        name = 'cpu'
+        interval = 7
+        pluginName = 'getCpuInfo'
+        triggers = {}
+        BaseMonitor.__init__(self, name, interval, pluginName, triggers)
+        
+class DefaultMemMonitor(BaseMonitor):
+    def __init__(self):
+        name = 'load'
+        interval = 7
+        pluginName = 'getMemInfo'
+        triggers = {}
+        BaseMonitor.__init__(self, name, interval, pluginName, triggers)
 
 class DefaultLoadMonitor(BaseMonitor):
     def __init__(self):
@@ -22,45 +38,20 @@ class DefaultLoadMonitor(BaseMonitor):
         interval = 7
         pluginName = 'getLoadInfo'
         lasttime = 0
-        threshold = {
-            'load1':[4, 9],
-            'load5':[3, 7],
-            'load15':[3, 9],
+        triggers = {
+            'load1': [0.01, 0.02],
+            'load5': [0.02, 0.05],
+            'load15': [0.05,0.1]
             }
-        BaseMonitor.__init__(self, name, interval, pluginName, lasttime, threshold)
-class DefaultMemMonitor(BaseMonitor):
-    def __init__(self):
-        name = 'load'
-        interval = 7
-        pluginName = 'getMemInfo'
-        threshold = {
-            'MemAvailable':['percentage', 20,10],
-            'Cached':['percentage', 20,10],
-            'Buffers':['percentage', 20,10],
-            }
-        BaseMonitor.__init__(self, name, interval, pluginName, threshold)
+        BaseMonitor.__init__(self, name, interval, pluginName, lasttime, triggers)
 
-class DefaultCpuMonitor(BaseMonitor):
-    def __init__(self):
-        name = 'cpu'
-        interval = 7
-        pluginName = 'getCpuInfo'
-        threshold = {
-            'iowait':['percentage', 5.5, 90],
-            'system':['percentage', 5, 90],
-            'idle':['percentage', 20, 10],
-            'user':['percentage', 80, 90],
-            'steal':['percentage', 80, 90],
-            'nice':[None, 80, 90],
-            }
-        BaseMonitor.__init__(self, name, interval, pluginName, threshold)
 
 class BaseTemplate:
-    def __init__(self, cpu, load, mem):
-        self.Items = {
+    def __init__(self, cpu, mem, load):
+        self.__services = {
             'cpu': cpu,
-            'load': load,
-            'mem': mem
+            'mem': mem,
+            'load': load,           
             }
     
     @property
@@ -70,7 +61,8 @@ class BaseTemplate:
     @property
     def editCpu(self):
         return self.__services['cpu'] 
-    
+
+#将所有模板添加到redis    
 def init_template():
     t1 = BaseTemplate(cpu=DefaultCpuMonitor(), mem=DefaultMemMonitor(),load=DefaultLoadMonitor())
     t1.editCpu().interval = 10
@@ -94,6 +86,7 @@ def init_hostname_certname():
     #主机名对应的模板添加到redis
     for k,v in hosts.items():
         redisSrv.set(k, v)
+        
 def run(result):
     while True:
         data = result.parse_response()

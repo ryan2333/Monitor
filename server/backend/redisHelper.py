@@ -16,9 +16,9 @@ class RedisHelper:
     def fabu(self, channel, msg):
         self.__conn.publish('FM90.0', msg) 
         
-    def subscribe(self, channel):
+    def subscribe(self,):
         pub = self.__conn.pubsub()
-        pub.subscribe(channel)
+        pub.subscribe('FM90.0')
         pub.parse_response()
         return pub
 
